@@ -1,4 +1,3 @@
-
 # Smart Timetable Generator
 
 A straightforward web application to create timetables for schools and colleges.
@@ -16,29 +15,28 @@ A straightforward web application to create timetables for schools and colleges.
 ```
 timetable-app/
 ├── app/
-│   ├── page.tsx                   # Auth screen (first screen users see)
+│   ├── page.jsx                   # Auth screen (first screen users see)
 │   ├── dashboard/
-│   │   ├── layout.jsx             # Dashboard with sidebar
-│   │   ├── page.jsx               # Dashboard home
-│   │   ├── courses/
-│   │   │   └── page.jsx           # Manage courses
-│   │   ├── teachers/
-│   │   │   └── page.jsx           # Manage teachers
-│   │   ├── rooms/
-│   │   │   └── page.jsx           # Manage rooms
-│   │   ├── classes/
-│   │   │   └── page.jsx           # Manage classes
-│   │   ├── generate/
-│   │   │   └── page.jsx           # Generate timetable
-│   │   └── view/
-│   │       ├── page.jsx           # View timetables
-│   │       ├── teacher/
-│   │       │   └── page.jsx       # Teacher view
-│   │       ├── class/
-│   │       │   └── page.jsx       # Class view
-│   │       └── room/
-│   │           └── page.jsx       # Room view
-│   └── layout.jsx                 # Root layout
+│   │   └── page.jsx               # Dashboard home with statistics
+│   ├── courses/
+│   │   └── page.jsx               # Manage courses
+│   ├── teachers/
+│   │   └── page.jsx               # Manage teachers
+│   ├── rooms/
+│   │   └── page.jsx               # Manage rooms
+│   ├── classes/
+│   │   └── page.jsx               # Manage classes
+│   ├── generate/
+│   │   └── page.jsx               # Generate timetable
+│   ├── view/
+│   │   └── page.jsx               # View timetables (main view)
+│   ├── teacher-view/
+│   │   └── page.jsx               # Teacher timetable view
+│   ├── class-view/
+│   │   └── page.jsx               # Class timetable view
+│   ├── room-view/
+│   │   └── page.jsx               # Room timetable view
+│   └── layout.jsx                 # Root layout with navigation sidebar
 ├── components/
 │   ├── Sidebar.jsx                # Navigation sidebar
 │   ├── Forms/                     # Basic form components
@@ -52,18 +50,18 @@ timetable-app/
 
 #### Frontend Components Explained
 
-- **page.tsx** - Main authentication screen with login/signup functionality
+- **page.jsx** - Main authentication screen with login/signup functionality
 - **dashboard/page.jsx** - Overview dashboard showing system statistics
-- **dashboard/courses/page.jsx** - Interface to add, edit, and delete courses
-- **dashboard/teachers/page.jsx** - Interface to manage teacher information and availability
-- **dashboard/rooms/page.jsx** - Interface to add and manage classroom information
-- **dashboard/classes/page.jsx** - Interface to create class groups and assign subjects
-- **dashboard/generate/page.jsx** - Page with timetable generation algorithm and options
-- **dashboard/view/page.jsx** - Main timetable viewing interface with filtering options
-- **dashboard/view/teacher/page.jsx** - Teacher-specific timetable view
-- **dashboard/view/class/page.jsx** - Class-specific timetable view
-- **dashboard/view/room/page.jsx** - Room utilization timetable view
-- **components/Sidebar.jsx** - Navigation component for the dashboard
+- **courses/page.jsx** - Interface to add, edit, and delete courses
+- **teachers/page.jsx** - Interface to manage teacher information and availability
+- **rooms/page.jsx** - Interface to add and manage classroom information
+- **classes/page.jsx** - Interface to create class groups and assign subjects
+- **generate/page.jsx** - Page with timetable generation algorithm and options
+- **view/page.jsx** - Main timetable viewing interface with filtering options
+- **teacher-view/page.jsx** - Teacher-specific timetable view
+- **class-view/page.jsx** - Class-specific timetable view
+- **room-view/page.jsx** - Room utilization timetable view
+- **components/Sidebar.jsx** - Navigation component for the application
 - **components/Forms/** - Reusable form components for data entry
 - **components/TimetableGrid.jsx** - Visual timetable display component
 
@@ -231,7 +229,7 @@ npm run dev
 
 2. **Create Basic Pages**
    - Authentication screen
-   - Dashboard layout
+   - Root layout with sidebar navigation
    - Data entry forms
 
 3. **Implement Data Management**
@@ -247,4 +245,4 @@ npm run dev
    - Add different view filters
 
 6. **Add Export Feature**
-   - Implement PDF export# smart-timetable-generator
+   - Implement PDF export
