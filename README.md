@@ -6,7 +6,7 @@ A straightforward web application to create timetables for schools and colleges.
 
 - **Frontend**: Next.js 15, Tailwind CSS
 - **Backend**: Express.js, MongoDB
-- **Export**: PDF generation
+- **Export**: PDF generation,docx etc
 
 ## Project Structure
 
@@ -29,13 +29,13 @@ timetable-app/
 │   ├── generate/
 │   │   └── page.jsx               # Generate timetable
 │   ├── view/
-│   │   └── page.jsx               # View timetables (main view)
-│   ├── teacher-view/
-│   │   └── page.jsx               # Teacher timetable view
-│   ├── class-view/
-│   │   └── page.jsx               # Class timetable view
-│   ├── room-view/
-│   │   └── page.jsx               # Room timetable view
+│   │   ├── page.jsx               # Main timetable view with filters
+│   │   ├── teacher/
+│   │   │   └── page.jsx           # Teacher timetable view
+│   │   ├── class/
+│   │   │   └── page.jsx           # Class timetable view
+│   │   └── room/
+│   │       └── page.jsx           # Room timetable view
 │   └── layout.jsx                 # Root layout with navigation sidebar
 ├── components/
 │   ├── Sidebar.jsx                # Navigation sidebar
@@ -58,9 +58,10 @@ timetable-app/
 - **classes/page.jsx** - Interface to create class groups and assign subjects
 - **generate/page.jsx** - Page with timetable generation algorithm and options
 - **view/page.jsx** - Main timetable viewing interface with filtering options
-- **teacher-view/page.jsx** - Teacher-specific timetable view
-- **class-view/page.jsx** - Class-specific timetable view
-- **room-view/page.jsx** - Room utilization timetable view
+- **view/teacher/page.jsx** - Teacher-specific timetable view
+- **view/class/page.jsx** - Class-specific timetable view
+- **view/room/page.jsx** - Room utilization timetable view
+- **layout.jsx** - Root layout with navigation sidebar
 - **components/Sidebar.jsx** - Navigation component for the application
 - **components/Forms/** - Reusable form components for data entry
 - **components/TimetableGrid.jsx** - Visual timetable display component
@@ -173,10 +174,10 @@ backend/
 
 ### 4. View & Export
 - Access timetables in different views:
-  - Overall view with filtering options
-  - Teacher-specific schedules
-  - Class-specific schedules
-  - Room utilization schedules
+  - Overall view with filtering options (/view)
+  - Teacher-specific schedules (/view/teacher)
+  - Class-specific schedules (/view/class)
+  - Room utilization schedules (/view/room)
 - Export timetables as PDF for distribution
 
 ## Timetable Algorithm
@@ -242,7 +243,47 @@ npm run dev
 
 5. **Create Viewing Options**
    - Build timetable display component
-   - Add different view filters
+   - Implement different view routes:
+     - /view - Main view with filtering
+     - /view/teacher - Teacher-specific views
+     - /view/class - Class-specific views
+     - /view/room - Room utilization views
 
 6. **Add Export Feature**
-   - Implement PDF export
+   - Implement PDF export functionality
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - Register new user (admin only)
+
+### Data Management
+- `GET /api/courses` - Get all courses
+- `POST /api/courses` - Create new course
+- `PUT /api/courses/:id` - Update course
+- `DELETE /api/courses/:id` - Delete course
+
+- `GET /api/teachers` - Get all teachers
+- `POST /api/teachers` - Create new teacher
+- `PUT /api/teachers/:id` - Update teacher
+- `DELETE /api/teachers/:id` - Delete teacher
+
+- `GET /api/rooms` - Get all rooms
+- `POST /api/rooms` - Create new room
+- `PUT /api/rooms/:id` - Update room
+- `DELETE /api/rooms/:id` - Delete room
+
+- `GET /api/classes` - Get all classes
+- `POST /api/classes` - Create new class
+- `PUT /api/classes/:id` - Update class
+- `DELETE /api/classes/:id` - Delete class
+
+### Timetable
+- `POST /api/timetable/generate` - Generate new timetable
+- `GET /api/timetable` - Get all timetables
+- `GET /api/timetable/:id` - Get specific timetable
+- `GET /api/timetable/teacher/:id` - Get teacher's timetable
+- `GET /api/timetable/class/:id` - Get class timetable
+- `GET /api/timetable/room/:id` - Get room timetable
+- `POST /api/timetable/export/:id` - Export timetable as PDF
