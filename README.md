@@ -6,7 +6,7 @@ A straightforward web application to create timetables for schools and colleges.
 
 - **Frontend**: Next.js 15, Tailwind CSS
 - **Backend**: Express.js, MongoDB
-- **Export**: PDF generation,docx etc
+- **Export**: PDF generation, docx etc
 
 ## Project Structure
 
@@ -72,11 +72,22 @@ backend/
 │   ├── Room.js                   # Room info
 │   ├── Class.js                  # Class info
 │   └── Timetable.js              # Generated timetables
+├── controllers/
+│   ├── authController.js         # Authentication logic
+│   ├── courseController.js       # Course CRUD operations
+│   ├── teacherController.js      # Teacher CRUD operations
+│   ├── roomController.js         # Room CRUD operations
+│   ├── classController.js        # Class CRUD operations
+│   └── timetableController.js    # Timetable generation & retrieval
 ├── routes/
 │   ├── auth.js                   # Auth endpoints
 │   ├── data.js                   # CRUD operations
 │   └── timetable.js              # Timetable generation
-├── timetableAlgorithm.js         # Simple scheduling algorithm
+├── middleware/
+│   ├── authMiddleware.js         # Authentication middleware
+│   └── validationMiddleware.js   # Input validation
+├── utils/
+│   └── timetableAlgorithm.js     # Simple scheduling algorithm
 └── server.js                     # Express setup
 ```
 
