@@ -9,18 +9,32 @@ import {
   User, 
   ArrowRight,
   CheckCircle,
-  UserPlus
+  UserPlus,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  XCircle,
+  CheckCircle2
 } from "lucide-react";
-import "../sass/fonts.scss"
+import { loginUser, registerUser } from "../services/authService";
+import "../sass/fonts.scss";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const router = useRouter();
+
+  // Password validation
+  const isPasswordValid = password.length >= 8;
 
   // Check if we're on client side and determine device type
   useEffect(() => {
@@ -34,14 +48,52 @@ export default function AuthPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, you would handle authentication here
-    router.push("/dashboard");
+    setIsLoading(true);
+    setError("");
+    setSuccessMessage("");
+    
+    // Password validation
+    if (!isLogin && !isPasswordValid) {
+      setError("Password must be at least 8 characters long");
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      if (isLogin) {
+        // Login
+        await loginUser({ email, password });
+        // Redirect to dashboard on successful login
+        router.push("/dashboard");
+      } else {
+        // Register
+        await registerUser({ username, email, password, role: "teacher" });
+        // Show success message and switch to login
+        setSuccessMessage("Account created successfully! You can now sign in.");
+        // Clear form fields
+        setUsername("");
+        setEmail("");
+        setPassword("");
+        // Switch to login mode after a delay
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccessMessage("");
+        }, 5000);
+      }
+    } catch (error) {
+      setError(error.message || "Authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
+    setError(""); // Clear any errors when switching modes
+    setSuccessMessage(""); // Clear any success messages
+    setPassword(""); // Clear password when switching modes
   };
 
   // Don't render anything until mounted
@@ -150,6 +202,30 @@ export default function AuthPage() {
               </button>
             </div>
 
+            {/* Success Message */}
+            {successMessage && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-emerald-500/20 border border-emerald-500/50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"
+              >
+                <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0 mt-0.5" />
+                <span>{successMessage}</span>
+              </motion.div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"
+              >
+                <AlertCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </motion.div>
+            )}
+
             {/* Form */}
             <AnimatePresence mode="wait">
               <motion.form
@@ -168,9 +244,9 @@ export default function AuthPage() {
                     </div>
                     <input
                       type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Full Name"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Username"
                       className="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 pl-10 pr-3 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                       required={!isLogin}
                     />
@@ -191,18 +267,49 @@ export default function AuthPage() {
                   />
                 </div>
 
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Lock size={18} />
+                <div className="space-y-2">
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Lock size={18} />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
+                      placeholder="Password"
+                      className={`w-full bg-slate-800/50 border ${!isLogin && password && !isPasswordValid ? 'border-red-500' : 'border-slate-700'} rounded-lg py-3 pl-10 pr-10 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50`}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-3 pl-10 pr-3 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    required
-                  />
+                  
+                  {/* Password requirements - shown when creating account and password field is focused or has content */}
+                  {!isLogin && (passwordFocused || password) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-xs space-y-1 px-1"
+                    >
+                      <div className="flex items-center gap-1">
+                        {isPasswordValid ? (
+                          <CheckCircle size={12} className="text-emerald-400" />
+                        ) : (
+                          <XCircle size={12} className="text-red-400" />
+                        )}
+                        <span className={isPasswordValid ? "text-emerald-400" : "text-red-400"}>
+                          At least 8 characters
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 {isLogin && (
@@ -220,10 +327,23 @@ export default function AuthPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-300"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isLogin ? "Sign In" : "Create Account"}
-                  <ArrowRight size={16} />
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>{isLogin ? "Signing In..." : "Creating Account..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      {isLogin ? "Sign In" : "Create Account"}
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </motion.button>
                 
                 {!isLogin && (
