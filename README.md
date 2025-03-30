@@ -39,11 +39,6 @@ timetable-app/
 │   └── layout.jsx                 # Root layout with navigation sidebar
 ├── components/
 │   ├── Sidebar.jsx                # Navigation sidebar
-│   ├── Forms/                     # Basic form components
-│   │   ├── CourseForm.jsx
-│   │   ├── TeacherForm.jsx
-│   │   ├── RoomForm.jsx
-│   │   └── ClassForm.jsx
 │   └── TimetableGrid.jsx          # Timetable display component
 └── public/                        # Static assets
 ```

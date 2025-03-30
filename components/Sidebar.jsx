@@ -180,12 +180,6 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
               path="/generate" 
               isActive={isActiveRoute("/generate")} 
             />
-            <NavItem 
-              icon={<Calendar size={18} />} 
-              label="View Timetables" 
-              path="/view" 
-              isActive={isActiveRoute("/view")} 
-            />
           </NavGroup>
 
           {/* Management */}
@@ -217,7 +211,7 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
           </NavGroup>
 
           {/* Views */}
-          <NavGroup title="Specific Views">
+          <NavGroup title="View Timetables">
             <NavItem 
               icon={<Users size={18} />} 
               label="Teacher View" 
@@ -226,7 +220,7 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
             />
             <NavItem 
               icon={<School size={18} />} 
-              label="Class View" 
+              label="Class View(student)" 
               path="/view/class" 
               isActive={isActiveRoute("/view/class")} 
             />
@@ -235,12 +229,6 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
               label="Room View" 
               path="/view/room" 
               isActive={isActiveRoute("/view/room")} 
-            />
-            <NavItem 
-              icon={<Download size={18} />} 
-              label="Export" 
-              path="/export" 
-              isActive={isActiveRoute("/export")} 
             />
           </NavGroup>
 
