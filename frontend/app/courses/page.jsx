@@ -15,21 +15,14 @@ import {
   Search, 
   Trash, 
   UserPlus, 
-  X 
+  X,
+  AlertCircle
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
-import "../../sass/fonts.scss"
-
-
-// Dummy data for courses
-const coursesData = [
-  { id: 1, code: "CS101", name: "Introduction to Computer Science", department: "Computer Science", credit: 3, instructor: "Dr. Smith", students: 45 },
-  { id: 2, code: "MATH201", name: "Calculus II", department: "Mathematics", credit: 4, instructor: "Prof. Johnson", students: 32 },
-  { id: 3, code: "PHYS101", name: "Physics for Engineers", department: "Physics", credit: 4, instructor: "Dr. Wilson", students: 38 },
-  { id: 4, code: "ENG110", name: "Academic Writing", department: "English", credit: 3, instructor: "Ms. Davis", students: 28 },
-  { id: 5, code: "CHEM142", name: "General Chemistry", department: "Chemistry", credit: 4, instructor: "Prof. Brown", students: 40 },
-  { id: 6, code: "BIO150", name: "Introduction to Biology", department: "Biology", credit: 3, instructor: "Dr. Garcia", students: 35 },
-];
+import "../../sass/fonts.scss";
+import { getCourses, createCourse, deleteCourse } from "@/services/courseService";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Department colors for visual distinction
 const departmentColors = {
@@ -47,8 +40,10 @@ export default function Courses() {
   const [activeTab, setActiveTab] = useState("courses");
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [courses, setCourses] = useState(coursesData);
-  const [filteredCourses, setFilteredCourses] = useState(coursesData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [newCourse, setNewCourse] = useState({
     code: "",
@@ -58,6 +53,25 @@ export default function Courses() {
     instructor: "",
     students: ""
   });
+  
+  // Fetch courses on component mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setIsLoading(true);
+        const response = await getCourses();
+        setCourses(response.data);
+        setFilteredCourses(response.data);
+        setIsLoading(false);
+      } catch (err) {
+        setError(err.error || "Failed to fetch courses");
+        setIsLoading(false);
+        toast.error(err.error || "Failed to fetch courses");
+      }
+    };
+    
+    fetchCourses();
+  }, []);
   
   // Get unique departments for filter
   const departments = ["All", ...new Set(courses.map(course => course.department))];
@@ -117,26 +131,44 @@ export default function Courses() {
     setNewCourse(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddCourse = (e) => {
+  const handleAddCourse = async (e) => {
     e.preventDefault();
     
-    // Create new course object
-    const course = {
-      id: courses.length + 1,
-      ...newCourse,
-      credit: parseInt(newCourse.credit),
-      students: parseInt(newCourse.students)
-    };
-    
-    // Add new course to courses list
-    setCourses(prev => [...prev, course]);
-    
-    // Close modal and reset form
-    toggleModal();
+    try {
+      // Create course data object from form
+      const courseData = {
+        ...newCourse,
+        credit: parseInt(newCourse.credit),
+        students: parseInt(newCourse.students)
+      };
+      
+      // Submit to API
+      const response = await createCourse(courseData);
+      
+      // Add new course to state
+      setCourses(prev => [...prev, response.data]);
+      
+      // Show success message
+      toast.success("Course created successfully!");
+      
+      // Close modal and reset form
+      toggleModal();
+    } catch (err) {
+      toast.error(err.error || "Failed to create course");
+    }
   };
 
-  const handleDeleteCourse = (id) => {
-    setCourses(courses.filter(course => course.id !== id));
+  const handleDeleteCourse = async (id) => {
+    try {
+      // Confirm before delete
+      if (window.confirm("Are you sure you want to delete this course?")) {
+        await deleteCourse(id);
+        setCourses(courses.filter(course => course._id !== id));
+        toast.success("Course deleted successfully!");
+      }
+    } catch (err) {
+      toast.error(err.error || "Failed to delete course");
+    }
   };
 
   return (
@@ -225,56 +257,73 @@ export default function Courses() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-rose-900/30 border border-rose-800 text-rose-200 px-4 py-3 rounded-lg flex items-center">
+                <AlertCircle size={20} className="mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Courses Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {filteredCourses.map((course, index) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:shadow-lg hover:shadow-emerald-900/10 transition-all duration-300"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className={`px-2 py-1 rounded text-xs font-medium bg-${departmentColors[course.department]}-900/30 text-${departmentColors[course.department]}-400 border border-${departmentColors[course.department]}-800/50`}>
-                      {course.code}
-                    </div>
-                    <div className="flex space-x-1">
-                      <button className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors">
-                        <Edit size={14} />
-                      </button>
-                      <button 
-                        className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                        onClick={() => handleDeleteCourse(course.id)}
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <h3 className="font-medium text-lg mb-1 line-clamp-1">{course.name}</h3>
-                  <div className="flex items-center text-slate-400 text-sm mb-3">
-                    <Book size={14} className="mr-1" />
-                    <span>{course.credit} Credits</span>
-                    <span className="mx-2">•</span>
-                    <span>{course.department}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">
-                        <span className="text-xs">{course.instructor.split(' ').map(n => n[0]).join('')}</span>
+            {!isLoading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {filteredCourses.map((course, index) => (
+                  <motion.div
+                    key={course._id || course.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:shadow-lg hover:shadow-emerald-900/10 transition-all duration-300"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className={`px-2 py-1 rounded text-xs font-medium bg-${departmentColors[course.department] || 'slate'}-900/30 text-${departmentColors[course.department] || 'slate'}-400 border border-${departmentColors[course.department] || 'slate'}-800/50`}>
+                        {course.code}
                       </div>
-                      <span className="ml-2 text-sm">{course.instructor}</span>
+                      <div className="flex space-x-1">
+                        <button className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors">
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
+                          onClick={() => handleDeleteCourse(course._id || course.id)}
+                        >
+                          <Trash size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center text-xs text-slate-400">
-                      <UserPlus size={12} className="mr-1" />
-                      <span>{course.students} Students</span>
+                    <h3 className="font-medium text-lg mb-1 line-clamp-1">{course.name}</h3>
+                    <div className="flex items-center text-slate-400 text-sm mb-3">
+                      <Book size={14} className="mr-1" />
+                      <span>{course.credit} Credits</span>
+                      <span className="mx-2">•</span>
+                      <span>{course.department}</span>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center">
+                          <span className="text-xs">{course.instructor?.split(' ').map(n => n[0]).join('')}</span>
+                        </div>
+                        <span className="ml-2 text-sm">{course.instructor}</span>
+                      </div>
+                      <div className="flex items-center text-xs text-slate-400">
+                        <UserPlus size={12} className="mr-1" />
+                        <span>{course.students} Students</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
             
-            {filteredCourses.length === 0 && (
+            {!isLoading && !error && filteredCourses.length === 0 && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
                 <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
                   <Book size={32} className="text-slate-400" />
@@ -295,6 +344,20 @@ export default function Courses() {
           </div>
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
 
       {/* Add Course Modal */}
       <AnimatePresence>

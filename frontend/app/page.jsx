@@ -14,7 +14,8 @@ import {
   Eye,
   EyeOff,
   XCircle,
-  CheckCircle2
+  CheckCircle2,
+  UserCog
 } from "lucide-react";
 import { loginUser, registerUser } from "../services/authService";
 import "../sass/fonts.scss";
@@ -31,6 +32,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [userRole, setUserRole] = useState("teacher"); // Default role is teacher
   const router = useRouter();
 
   // Password validation
@@ -64,12 +66,17 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         // Login
-        await loginUser({ email, password });
-        // Redirect to dashboard on successful login
-        router.push("/dashboard");
+        const userData = await loginUser({ email, password });
+        
+        // Redirect based on user role
+        if (userData.role === "admin") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         // Register
-        await registerUser({ username, email, password, role: "teacher" });
+        await registerUser({ username, email, password, role: userRole });
         // Show success message and switch to login
         setSuccessMessage("Account created successfully! You can now sign in.");
         // Clear form fields
@@ -145,7 +152,7 @@ export default function AuthPage() {
               <p className="text-slate-200 text-sm md:text-base max-w-md mx-auto mb-6">
                 {isLogin
                   ? "Log in to access your personalized timetable and continue optimizing your schedule."
-                  : "Create an account to start building intelligent, conflict-free schedules with our AI-powered platform."}
+                  : "Create an account to start building efficient, conflict-free schedules with our timetable platform."}
               </p>
               
               {!isMobile && (
@@ -156,7 +163,7 @@ export default function AuthPage() {
                   transition={{ delay: 0.4, duration: 0.5 }}
                 >
                   {[
-                    "AI-powered timetable generation",
+                    "Smart timetable generation",
                     "Optimize teacher and resource allocation",
                     "Eliminate scheduling conflicts automatically",
                   ].map((feature, idx) => (
@@ -312,6 +319,39 @@ export default function AuthPage() {
                   )}
                 </div>
 
+                {/* Role selection for registration */}
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <label className="text-sm text-slate-300 ml-1 font-medium">Account Type</label>
+                    <div className="flex gap-3">
+                      <button 
+                        type="button"
+                        onClick={() => setUserRole("teacher")}
+                        className={`flex-1 py-2 px-3 rounded-lg transition-colors ${
+                          userRole === "teacher" 
+                            ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300" 
+                            : "bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800"
+                        } flex items-center justify-center gap-2`}
+                      >
+                        <User size={16} />
+                        <span>Teacher</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setUserRole("admin")}
+                        className={`flex-1 py-2 px-3 rounded-lg transition-colors ${
+                          userRole === "admin" 
+                            ? "bg-purple-500/20 border border-purple-500/50 text-purple-300" 
+                            : "bg-slate-800/50 border border-slate-700 text-slate-300 hover:bg-slate-800"
+                        } flex items-center justify-center gap-2`}
+                      >
+                        <UserCog size={16} />
+                        <span>Admin</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {isLogin && (
                   <div className="text-right">
                     <a
@@ -328,7 +368,11 @@ export default function AuthPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className={`w-full ${
+                    userRole === "admin" && !isLogin 
+                      ? "bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600" 
+                      : "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                  } text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed`}
                 >
                   {isLoading ? (
                     <>

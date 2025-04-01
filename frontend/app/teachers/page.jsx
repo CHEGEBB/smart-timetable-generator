@@ -18,20 +18,14 @@ import {
   Users,
   Briefcase,
   CheckSquare,
-  X 
+  X,
+  AlertCircle
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
-import "../../sass/fonts.scss"
-
-// Dummy data for teachers
-const teachersData = [
-  { id: 1, name: "Dr. Smith", subjects: ["Computer Science", "Programming", "Data Structures"], availability: { monday: [true, true, false, true, true], tuesday: [true, true, true, false, false], wednesday: [false, true, true, true, false], thursday: [true, false, false, true, true], friday: [true, true, true, false, true] }, contact: "smith@example.com", department: "Computer Science" },
-  { id: 2, name: "Prof. Johnson", subjects: ["Mathematics", "Calculus", "Linear Algebra"], availability: { monday: [true, true, true, false, true], tuesday: [false, true, true, true, false], wednesday: [true, false, true, true, false], thursday: [true, true, false, false, true], friday: [false, true, true, true, true] }, contact: "johnson@example.com", department: "Mathematics" },
-  { id: 3, name: "Dr. Wilson", subjects: ["Physics", "Mechanics", "Thermodynamics"], availability: { monday: [false, true, true, true, false], tuesday: [true, true, false, true, true], wednesday: [true, false, true, true, true], thursday: [false, true, true, false, true], friday: [true, true, false, true, false] }, contact: "wilson@example.com", department: "Physics" },
-  { id: 4, name: "Ms. Davis", subjects: ["English", "Writing", "Literature"], availability: { monday: [true, false, true, true, false], tuesday: [true, true, false, true, true], wednesday: [false, true, true, false, true], thursday: [true, false, true, true, false], friday: [true, true, true, false, true] }, contact: "davis@example.com", department: "English" },
-  { id: 5, name: "Prof. Brown", subjects: ["Chemistry", "Organic Chemistry", "Biochemistry"], availability: { monday: [true, true, false, true, true], tuesday: [false, true, true, true, false], wednesday: [true, true, false, true, true], thursday: [true, false, true, false, true], friday: [false, true, true, true, false] }, contact: "brown@example.com", department: "Chemistry" },
-  { id: 6, name: "Dr. Garcia", subjects: ["Biology", "Genetics", "Microbiology"], availability: { monday: [true, false, true, true, false], tuesday: [true, true, false, true, true], wednesday: [false, true, true, false, true], thursday: [true, true, false, true, false], friday: [true, false, true, true, true] }, contact: "garcia@example.com", department: "Biology" },
-];
+import "../../sass/fonts.scss";
+import { getTeachers, createTeacher, deleteTeacher, updateTeacher } from "@/services/teacherService";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Department colors for visual distinction
 const departmentColors = {
@@ -52,8 +46,10 @@ export default function Teachers() {
   const [activeTab, setActiveTab] = useState("teachers");
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [teachers, setTeachers] = useState(teachersData);
-  const [filteredTeachers, setFilteredTeachers] = useState(teachersData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [newTeacher, setNewTeacher] = useState({
     name: "",
@@ -71,6 +67,27 @@ export default function Teachers() {
   const [tempSubject, setTempSubject] = useState("");
   const [activeScheduleDay, setActiveScheduleDay] = useState("monday");
   const [showAvailability, setShowAvailability] = useState({});
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editTeacherId, setEditTeacherId] = useState(null);
+  
+  // Fetch teachers on component mount
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        setIsLoading(true);
+        const response = await getTeachers();
+        setTeachers(response.data);
+        setFilteredTeachers(response.data);
+        setIsLoading(false);
+      } catch (err) {
+        setError(err.error || "Failed to fetch teachers");
+        setIsLoading(false);
+        toast.error(err.error || "Failed to fetch teachers");
+      }
+    };
+    
+    fetchTeachers();
+  }, []);
   
   // Get unique departments for filter
   const departments = ["All", ...new Set(teachers.map(teacher => teacher.department))];
@@ -92,7 +109,7 @@ export default function Teachers() {
   useEffect(() => {
     const initialShowAvailability = {};
     teachers.forEach(teacher => {
-      initialShowAvailability[teacher.id] = false;
+      initialShowAvailability[teacher._id || teacher.id] = false;
     });
     setShowAvailability(initialShowAvailability);
   }, [teachers]);
@@ -120,9 +137,12 @@ export default function Teachers() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const toggleModal = () => {
-    setIsModalOpen(!isModalOpen);
-    if (!isModalOpen) {
+  const toggleModal = (teacherToEdit = null) => {
+    if (isModalOpen) {
+      // Closing modal - reset state
+      setIsModalOpen(false);
+      setIsEditMode(false);
+      setEditTeacherId(null);
       setNewTeacher({
         name: "",
         subjects: [],
@@ -138,6 +158,44 @@ export default function Teachers() {
       });
       setTempSubject("");
       setActiveScheduleDay("monday");
+    } else {
+      // Opening modal
+      setIsModalOpen(true);
+      
+      if (teacherToEdit) {
+        // Edit mode
+        setIsEditMode(true);
+        setEditTeacherId(teacherToEdit._id || teacherToEdit.id);
+        setNewTeacher({
+          name: teacherToEdit.name || "",
+          subjects: teacherToEdit.subjects || [],
+          availability: teacherToEdit.availability || {
+            monday: [true, true, true, true, true],
+            tuesday: [true, true, true, true, true],
+            wednesday: [true, true, true, true, true],
+            thursday: [true, true, true, true, true],
+            friday: [true, true, true, true, true]
+          },
+          contact: teacherToEdit.contact || "",
+          department: teacherToEdit.department || ""
+        });
+      } else {
+        // Create mode
+        setIsEditMode(false);
+        setNewTeacher({
+          name: "",
+          subjects: [],
+          availability: {
+            monday: [true, true, true, true, true],
+            tuesday: [true, true, true, true, true],
+            wednesday: [true, true, true, true, true],
+            thursday: [true, true, true, true, true],
+            friday: [true, true, true, true, true]
+          },
+          contact: "",
+          department: ""
+        });
+      }
     }
   };
 
@@ -182,24 +240,54 @@ export default function Teachers() {
     }));
   };
 
-  const handleAddTeacher = (e) => {
+  const handleSubmitTeacher = async (e) => {
     e.preventDefault();
     
-    // Create new teacher object
-    const teacher = {
-      id: teachers.length + 1,
-      ...newTeacher
-    };
-    
-    // Add new teacher to teachers list
-    setTeachers(prev => [...prev, teacher]);
-    
-    // Close modal and reset form
-    toggleModal();
+    try {
+      if (isEditMode) {
+        // Update existing teacher
+        const response = await updateTeacher(editTeacherId, newTeacher);
+        
+        // Update teachers list with the edited teacher
+        setTeachers(prevTeachers => 
+          prevTeachers.map(teacher => 
+            (teacher._id || teacher.id) === editTeacherId ? response.data : teacher
+          )
+        );
+        
+        toast.success("Teacher updated successfully!");
+      } else {
+        // Create new teacher
+        const response = await createTeacher(newTeacher);
+        
+        // Add new teacher to teachers list
+        setTeachers(prev => [...prev, response.data]);
+        
+        toast.success("Teacher created successfully!");
+      }
+      
+      // Close modal and reset form
+      toggleModal();
+    } catch (err) {
+      toast.error(err.error || `Failed to ${isEditMode ? 'update' : 'create'} teacher`);
+    }
   };
 
-  const handleDeleteTeacher = (id) => {
-    setTeachers(teachers.filter(teacher => teacher.id !== id));
+  const handleDeleteTeacher = async (id) => {
+    try {
+      // Confirm before delete
+      if (window.confirm("Are you sure you want to delete this teacher?")) {
+        await deleteTeacher(id);
+        setTeachers(teachers.filter(teacher => (teacher._id || teacher.id) !== id));
+        toast.success("Teacher deleted successfully!");
+      }
+    } catch (err) {
+      toast.error(err.error || "Failed to delete teacher");
+    }
+  };
+
+  const handleEditTeacher = (teacher) => {
+    toggleModal(teacher);
   };
 
   // Helper function to calculate availability percentage
@@ -294,7 +382,7 @@ export default function Teachers() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={toggleModal}
+                  onClick={() => toggleModal()}
                   className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300"
                 >
                   <Plus size={16} />
@@ -303,113 +391,141 @@ export default function Teachers() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-rose-900/30 border border-rose-800 text-rose-200 px-4 py-3 rounded-lg flex items-center">
+                <AlertCircle size={20} className="mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Teachers Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {filteredTeachers.map((teacher, index) => (
-                <motion.div
-                  key={teacher.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:shadow-lg hover:shadow-emerald-900/10 transition-all duration-300"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className={`px-2 py-1 rounded text-xs font-medium bg-${departmentColors[teacher.department]}-900/30 text-${departmentColors[teacher.department]}-400 border border-${departmentColors[teacher.department]}-800/50`}>
-                      {teacher.department}
-                    </div>
-                    <div className="flex space-x-1">
-                      <button className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors">
-                        <Edit size={14} />
-                      </button>
-                      <button 
-                        className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                        onClick={() => handleDeleteTeacher(teacher.id)}
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center mb-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                      <span className="text-sm">{teacher.name.split(' ').map(n => n[0]).join('')}</span>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="font-medium text-lg">{teacher.name}</h3>
-                      <p className="text-slate-400 text-sm">{teacher.contact}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <div className="flex items-center text-slate-400 text-sm mb-1">
-                      <Book size={14} className="mr-1" />
-                      <span>Subjects</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {teacher.subjects.map((subject, idx) => (
-                        <span 
-                          key={idx} 
-                          className="text-xs px-2 py-1 bg-slate-700 rounded-full text-slate-300"
+            {!isLoading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {filteredTeachers.map((teacher, index) => (
+                  <motion.div
+                    key={teacher._id || teacher.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:shadow-lg hover:shadow-emerald-900/10 transition-all duration-300"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className={`px-2 py-1 rounded text-xs font-medium bg-${departmentColors[teacher.department] || 'slate'}-900/30 text-${departmentColors[teacher.department] || 'slate'}-400 border border-${departmentColors[teacher.department] || 'slate'}-800/50`}>
+                        {teacher.department}
+                      </div>
+                      <div className="flex space-x-1">
+                        <button 
+                          className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
+                          onClick={() => handleEditTeacher(teacher)}
                         >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="flex items-center justify-between text-slate-400 text-sm mb-1">
-                      <div className="flex items-center">
-                        <Clock size={14} className="mr-1" />
-                        <span>Availability</span>
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
+                          onClick={() => handleDeleteTeacher(teacher._id || teacher.id)}
+                        >
+                          <Trash size={14} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => toggleTeacherAvailability(teacher.id)}
-                        className="text-xs text-emerald-400 hover:underline"
-                      >
-                        {showAvailability[teacher.id] ? "Hide" : "Show"}
-                      </button>
                     </div>
                     
-                    {!showAvailability[teacher.id] && (
-                      <div className="flex items-center justify-between">
-                        <div className="w-full bg-slate-700 rounded-full h-2.5">
-                          <div 
-                            className="bg-emerald-500 h-2.5 rounded-full" 
-                            style={{ width: `${calculateAvailability(teacher.availability)}%` }}
-                          ></div>
-                        </div>
-                        <span className="ml-2 text-xs text-slate-400">{calculateAvailability(teacher.availability)}%</span>
+                    <div className="flex items-center mb-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                        <span className="text-sm">{teacher.name.split(' ').map(n => n[0]).join('')}</span>
                       </div>
-                    )}
+                      <div className="ml-3">
+                        <h3 className="font-medium text-lg">{teacher.name}</h3>
+                        <p className="text-slate-400 text-sm">{teacher.contact}</p>
+                      </div>
+                    </div>
                     
-                    {showAvailability[teacher.id] && (
-                      <div className="mt-2 border border-slate-700 rounded-lg p-2 bg-slate-800/50">
-                        <div className="grid grid-cols-5 gap-1 text-xs text-center mb-1">
-                          {daysOfWeek.map(day => (
-                            <div key={day} className="capitalize text-slate-400">{day.substring(0, 3)}</div>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-5 gap-1">
-                          {daysOfWeek.map(day => (
-                            <div key={day} className="flex flex-col gap-1">
-                              {teacher.availability[day].map((available, periodIdx) => (
-                                <div 
-                                  key={periodIdx}
-                                  className={`w-full h-3 rounded ${available ? "bg-emerald-500" : "bg-slate-700"}`}
-                                ></div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
+                    <div className="mb-3">
+                      <div className="flex items-center text-slate-400 text-sm mb-1">
+                        <Book size={14} className="mr-1" />
+                        <span>Subjects</span>
                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {teacher.subjects && teacher.subjects.length > 0 ? (
+                          teacher.subjects.map((subject, idx) => (
+                            <span 
+                              key={idx} 
+                              className="text-xs px-2 py-1 bg-slate-700 rounded-full text-slate-300"
+                            >
+                              {subject}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-slate-500">No subjects assigned</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between text-slate-400 text-sm mb-1">
+                        <div className="flex items-center">
+                          <Clock size={14} className="mr-1" />
+                          <span>Availability</span>
+                        </div>
+                        <button 
+                          onClick={() => toggleTeacherAvailability(teacher._id || teacher.id)}
+                          className="text-xs text-emerald-400 hover:underline"
+                        >
+                          {showAvailability[teacher._id || teacher.id] ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                      
+                      {!showAvailability[teacher._id || teacher.id] && (
+                        <div className="flex items-center justify-between">
+                          <div className="w-full bg-slate-700 rounded-full h-2.5">
+                            <div 
+                              className="bg-emerald-500 h-2.5 rounded-full" 
+                              style={{ width: `${calculateAvailability(teacher.availability)}%` }}
+                            ></div>
+                          </div>
+                          <span className="ml-2 text-xs text-slate-400">{calculateAvailability(teacher.availability)}%</span>
+                        </div>
+                      )}
+                      
+                      {showAvailability[teacher._id || teacher.id] && (
+                        <div className="mt-2 border border-slate-700 rounded-lg p-2 bg-slate-800/50">
+                          <div className="grid grid-cols-5 gap-1 text-xs text-center mb-1">
+                            {daysOfWeek.map(day => (
+                              <div key={day} className="capitalize text-slate-400">{day.substring(0, 3)}</div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-5 gap-1">
+                            {daysOfWeek.map(day => (
+                              <div key={day} className="flex flex-col gap-1">
+                                {teacher.availability && teacher.availability[day] ? (
+                                  teacher.availability[day].map((available, periodIdx) => (
+                                    <div 
+                                      key={periodIdx}
+                                      className={`w-full h-3 rounded ${available ? "bg-emerald-500" : "bg-slate-700"}`}
+                                    ></div>
+                                  ))
+                                ) : (
+                                  <div className="text-xs text-slate-500 text-center">N/A</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
             
-            {filteredTeachers.length === 0 && (
+            {!isLoading && !error && filteredTeachers.length === 0 && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
                 <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
                   <Users size={32} className="text-slate-400" />
@@ -419,7 +535,7 @@ export default function Teachers() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={toggleModal}
+                  onClick={() => toggleModal()}
                   className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2 px-4 rounded-lg inline-flex items-center gap-2 transition-all duration-300"
                 >
                   <Plus size={16} />
@@ -431,7 +547,21 @@ export default function Teachers() {
         </main>
       </div>
 
-      {/* Add Teacher Modal */}
+      {/* Toast Notifications */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+
+      {/* Add/Edit Teacher Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <>
@@ -451,10 +581,11 @@ export default function Teachers() {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring", damping: 20 }}
               className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-xl font-bold">Add New Teacher</h2>
+                  <h2 className="text-xl font-bold">{isEditMode ? 'Edit Teacher' : 'Add New Teacher'}</h2>
                   <button
                     onClick={toggleModal}
                     className="p-1 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
@@ -463,7 +594,7 @@ export default function Teachers() {
                   </button>
                 </div>
 
-                <form onSubmit={handleAddTeacher}>
+                <form onSubmit={handleSubmitTeacher}>
                   <div className="space-y-4">
                     {/* Teacher Name */}
                     <div className="relative">
@@ -580,22 +711,24 @@ export default function Teachers() {
                         <div className="p-3">
                           <h4 className="text-sm mb-2 capitalize">{activeScheduleDay}</h4>
                           <div className="grid grid-cols-5 gap-2">
-                            {newTeacher.availability[activeScheduleDay].map((available, periodIdx) => (
-                              <div key={periodIdx} className="text-center">
-                                <p className="text-xs text-slate-400 mb-1">Period {periodIdx + 1}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleAvailabilityChange(activeScheduleDay, periodIdx)}
-                                  className={`w-full h-8 rounded transition ${available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'}`}
-                                >
-                                  {available ? (
-                                    <CheckSquare size={16} className="mx-auto text-white" />
-                                  ) : (
-                                    <X size={16} className="mx-auto text-slate-400" />
-                                  )}
-                                </button>
-                              </div>
-                            ))}
+                            {newTeacher.availability && newTeacher.availability[activeScheduleDay] && 
+                              newTeacher.availability[activeScheduleDay].map((available, periodIdx) => (
+                                <div key={periodIdx} className="text-center">
+                                  <p className="text-xs text-slate-400 mb-1">Period {periodIdx + 1}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAvailabilityChange(activeScheduleDay, periodIdx)}
+                                    className={`w-full h-8 rounded transition ${available ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-600'}`}
+                                  >
+                                    {available ? (
+                                      <CheckSquare size={16} className="mx-auto text-white" />
+                                    ) : (
+                                      <X size={16} className="mx-auto text-slate-400" />
+                                    )}
+                                  </button>
+                                </div>
+                              ))
+                            }
                           </div>
                         </div>
                       </div>
@@ -608,8 +741,8 @@ export default function Teachers() {
                       type="submit"
                       className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 mt-6"
                     >
-                      <Plus size={16} />
-                      <span>Add Teacher</span>
+                      {isEditMode ? <Edit size={16} /> : <Plus size={16} />}
+                      <span>{isEditMode ? 'Update Teacher' : 'Add Teacher'}</span>
                     </motion.button>
                   </div>
                 </form>

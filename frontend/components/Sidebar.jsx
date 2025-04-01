@@ -3,25 +3,20 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Calendar,
-  FileText,
-  Grid,
   Home,
   Layout,
   LogOut,
-  MessageSquare,
   School,
-  Settings,
   Users,
-  ChevronRight,
   BarChart2,
   BookOpen,
   X,
   Menu,
-  Download
 } from "lucide-react";
+import "@/sass/fonts.scss";
 
 // Navigation Item Component
 function NavItem({ icon, label, path, isActive, onClick }) {
@@ -60,6 +55,7 @@ function NavGroup({ title, children }) {
 
 export default function Sidebar({ user = { name: "Admin", role: "Administrator" } }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -72,6 +68,22 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
   // Toggle sidebar on mobile
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  // Handle logout
+  const handleLogout = (e) => {
+    e.preventDefault();
+    
+    // Clear any user data from localStorage
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    router.push('/');
+    
+    // Close sidebar on mobile if open
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
   };
 
   // Check screen size on window resize
@@ -232,11 +244,13 @@ export default function Sidebar({ user = { name: "Admin", role: "Administrator" 
             />
           </NavGroup>
 
-          {/* Utilities */}
+          {/* Logout only */}
           <div className="pt-4 border-t border-slate-700">
-            <NavItem icon={<Settings size={18} />} label="Settings" path="/settings" isActive={isActiveRoute("/settings")} />
-            <NavItem icon={<MessageSquare size={18} />} label="Support" path="/support" isActive={isActiveRoute("/support")} />
-            <NavItem icon={<LogOut size={18} />} label="Logout" path="/logout" />
+            <NavItem 
+              icon={<LogOut size={18} />} 
+              label="Logout" 
+              onClick={handleLogout} 
+            />
           </div>
         </nav>
 

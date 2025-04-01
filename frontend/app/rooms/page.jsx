@@ -20,12 +20,15 @@ import {
   Coffee,
   Wifi,
   Award,
-  Projector,
   Check,
-  Laptop
+  Laptop,
+  AlertCircle
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
+import { getRooms, createRoom, deleteRoom, toggleRoomAvailability } from "@/services/roomService";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Custom Projector icon since it's not in lucide-react
 const ProjectorIcon = (props) => (
@@ -48,138 +51,6 @@ const ProjectorIcon = (props) => (
   </svg>
 );
 
-// Dummy data for rooms with image references
-const roomsData = [
-  { 
-    id: 1, 
-    name: "Smart Classroom 101", 
-    capacity: 35, 
-    building: "Main Building", 
-    floor: 1, 
-    available: true, 
-    hasProjector: true, 
-    hasComputers: true, 
-    hasWifi: true,
-    hasCoffee: false,
-    isCertified: true,
-    image: "/assets/class1.jpeg", 
-    lastBooked: "2 hours ago",
-    nextSession: "Tomorrow, 9:00 AM"
-  },
-  { 
-    id: 2, 
-    name: "Collaborative Space 102", 
-    capacity: 25, 
-    building: "Main Building", 
-    floor: 1, 
-    available: false, 
-    hasProjector: true, 
-    hasComputers: false, 
-    hasWifi: true,
-    hasCoffee: true,
-    isCertified: false,
-    image: "/assets/colab.jpeg",
-    lastBooked: "5 hours ago",
-    nextSession: "Today, 3:30 PM" 
-  },
-  { 
-    id: 3, 
-    name: "Science Lab 201", 
-    capacity: 30, 
-    building: "Science Wing", 
-    floor: 2, 
-    available: true, 
-    hasProjector: true, 
-    hasComputers: true, 
-    hasWifi: true,
-    hasCoffee: false,
-    isCertified: true,
-    image: "/assets/lab.jpg",
-    lastBooked: "Yesterday",
-    nextSession: "Wednesday, 10:15 AM"
-  },
-  { 
-    id: 4, 
-    name: "Lecture Hall A", 
-    capacity: 120, 
-    building: "Arts Building", 
-    floor: 1, 
-    available: true, 
-    hasProjector: true, 
-    hasComputers: false, 
-    hasWifi: true,
-    hasCoffee: false,
-    isCertified: true,
-    image: "/assets/lec.jpg",
-    lastBooked: "1 week ago",
-    nextSession: "Friday, 2:00 PM"
-  },
-  { 
-    id: 5, 
-    name: "Conference Room 305", 
-    capacity: 40, 
-    building: "Main Building", 
-    floor: 3, 
-    available: false, 
-    hasProjector: false, 
-    hasComputers: false, 
-    hasWifi: true,
-    hasCoffee: true,
-    isCertified: false,
-    image: "/assets/hall.jpeg",
-    lastBooked: "3 days ago",
-    nextSession: "Today, 4:45 PM"
-  },
-  { 
-    id: 6, 
-    name: "Computer Lab", 
-    capacity: 25, 
-    building: "Technology Center", 
-    floor: 1, 
-    available: true, 
-    hasProjector: true, 
-    hasComputers: true, 
-    hasWifi: true,
-    hasCoffee: false,
-    isCertified: true,
-    image: "/assets/computer.jpg",
-    lastBooked: "Yesterday",
-    nextSession: "Tomorrow, 11:30 AM"
-  },
-  { 
-    id: 7, 
-    name: "Study Room 412", 
-    capacity: 15, 
-    building: "Library", 
-    floor: 4, 
-    available: true, 
-    hasProjector: false, 
-    hasComputers: false, 
-    hasWifi: true,
-    hasCoffee: true,
-    isCertified: false,
-    image: "/assets/study.jpg",
-    lastBooked: "4 hours ago",
-    nextSession: "Thursday, 9:00 AM"
-  },
-  { 
-    id: 8, 
-    name: "Innovation Hub", 
-    capacity: 50, 
-    building: "Technology Center", 
-    floor: 2, 
-    available: false, 
-    hasProjector: true, 
-    hasComputers: true, 
-    hasWifi: true,
-    hasCoffee: true,
-    isCertified: true,
-    image: "/assets/tech.jpg",
-    lastBooked: "Just now",
-    nextSession: "Today, 5:30 PM"
-  },
-];
-
 // Building colors for visual distinction
 const buildingColors = {
   "Main Building": "blue",
@@ -196,11 +67,13 @@ export default function Rooms() {
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showRoomDetails, setShowRoomDetails] = useState(null);
-  const [rooms, setRooms] = useState(roomsData);
-  const [filteredRooms, setFilteredRooms] = useState(roomsData);
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
   const [selectedBuilding, setSelectedBuilding] = useState("All");
   const [activeView, setActiveView] = useState("grid"); // grid or list
   const [availabilityFilter, setAvailabilityFilter] = useState("all"); // all, available, unavailable
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [newRoom, setNewRoom] = useState({
     name: "",
     capacity: "",
@@ -212,8 +85,34 @@ export default function Rooms() {
     hasWifi: true,
     hasCoffee: false,
     isCertified: false,
-    image: "/assets/class1.jpg"
+    image: "/assets/class1.jpeg"
   });
+  import "../../sass/fonts.scss";
+
+  
+  // Fetch rooms from API
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setIsLoading(true);
+        const response = await getRooms();
+        if (response.success) {
+          setRooms(response.data);
+          setFilteredRooms(response.data);
+        } else {
+          setError(response.error);
+          toast.error(response.error);
+        }
+        setIsLoading(false);
+      } catch (err) {
+        setError("Failed to fetch rooms");
+        toast.error("Failed to fetch rooms");
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRooms();
+  }, []);
   
   // Get unique buildings for filter
   const buildings = ["All", ...new Set(rooms.map(room => room.building))];
@@ -293,42 +192,88 @@ export default function Rooms() {
     }));
   };
 
-  const handleAddRoom = (e) => {
+  const handleAddRoom = async (e) => {
     e.preventDefault();
     
-    // Create new room object with random session times
-    const room = {
-      id: rooms.length + 1,
-      ...newRoom,
-      capacity: parseInt(newRoom.capacity),
-      floor: parseInt(newRoom.floor),
-      lastBooked: "Just now",
-      nextSession: "Tomorrow, 9:00 AM"
-    };
-    
-    // Add new room to rooms list
-    setRooms(prev => [...prev, room]);
-    
-    // Close modal and reset form
-    toggleModal();
+    try {
+      // Create room data object from form
+      const roomData = {
+        ...newRoom,
+        capacity: parseInt(newRoom.capacity),
+        floor: parseInt(newRoom.floor)
+      };
+      
+      // Submit to API
+      const response = await createRoom(roomData);
+      
+      if (response.success) {
+        // Add new room to state
+        setRooms(prev => [...prev, response.data]);
+        
+        // Show success message
+        toast.success("Room created successfully!");
+        
+        // Close modal and reset form
+        toggleModal();
+      } else {
+        toast.error(response.error);
+      }
+    } catch (err) {
+      toast.error("Failed to create room");
+    }
   };
 
-  const handleDeleteRoom = (id) => {
-    setRooms(rooms.filter(room => room.id !== id));
+  const handleDeleteRoom = async (id) => {
+    try {
+      // Confirm before delete
+      if (window.confirm("Are you sure you want to delete this room?")) {
+        const response = await deleteRoom(id);
+        
+        if (response.success) {
+          setRooms(rooms.filter(room => room._id !== id));
+          toast.success("Room deleted successfully!");
+        } else {
+          toast.error(response.error);
+        }
+      }
+    } catch (err) {
+      toast.error("Failed to delete room");
+    }
   };
 
-  const toggleRoomAvailability = (id) => {
-    setRooms(rooms.map(room => 
-      room.id === id ? {...room, available: !room.available} : room
-    ));
+  const handleToggleRoomAvailability = async (id) => {
+    try {
+      const response = await toggleRoomAvailability(id);
+      
+      if (response.success) {
+        setRooms(rooms.map(room => 
+          room._id === id ? response.data : room
+        ));
+        toast.success(`Room is now ${response.data.available ? 'available' : 'unavailable'}`);
+      } else {
+        toast.error(response.error);
+      }
+    } catch (err) {
+      toast.error("Failed to update room availability");
+    }
   };
 
   // Function to generate a random image for the gallery selection
   const randomizeRoomImage = () => {
-    const imageNumber = Math.floor(Math.random() * 8) + 1;
+    const images = [
+      "/assets/class1.jpg",
+      "/assets/colab.jpeg",
+      "/assets/lab.jpg",
+      "/assets/lec.jpg",
+      "/assets/hall.jpeg",
+      "/assets/computer.jpg",
+      "/assets/study.jpg",
+      "/assets/tech.jpg"
+    ];
+    const randomImage = images[Math.floor(Math.random() * images.length)];
     setNewRoom(prev => ({
       ...prev,
-      image: `/assets/class${imageNumber}.jpg`
+      image: randomImage
     }));
   };
 
@@ -474,12 +419,27 @@ export default function Rooms() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-rose-900/30 border border-rose-800 text-rose-200 px-4 py-3 rounded-lg flex items-center mb-6">
+                <AlertCircle size={20} className="mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Rooms Display - Grid View */}
-            {activeView === "grid" && (
+            {!isLoading && !error && activeView === "grid" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {filteredRooms.map((room, index) => (
                   <motion.div
-                    key={room.id}
+                    key={room._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -527,7 +487,7 @@ export default function Rooms() {
                         <div className="flex space-x-1">
                           <button 
                             className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => toggleRoomAvailability(room.id)}
+                            onClick={() => handleToggleRoomAvailability(room._id)}
                           >
                             {room.available ? (
                               <X size={14} />
@@ -537,13 +497,13 @@ export default function Rooms() {
                           </button>
                           <button 
                             className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => toggleRoomDetails(room.id)}
+                            onClick={() => toggleRoomDetails(room._id)}
                           >
                             <Info size={14} />
                           </button>
                           <button 
                             className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => handleDeleteRoom(room.id)}
+                            onClick={() => handleDeleteRoom(room._id)}
                           >
                             <Trash size={14} />
                           </button>
@@ -591,7 +551,7 @@ export default function Rooms() {
                       
                       {/* Session Info (conditionally rendered details) */}
                       <AnimatePresence>
-                        {showRoomDetails === room.id && (
+                        {showRoomDetails === room._id && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
@@ -620,7 +580,7 @@ export default function Rooms() {
             )}
             
             {/* Rooms Display - List View */}
-            {activeView === "list" && (
+            {!isLoading && !error && activeView === "list" && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden mb-6">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -637,7 +597,7 @@ export default function Rooms() {
                     <tbody>
                       {filteredRooms.map((room, index) => (
                         <motion.tr 
-                          key={room.id}
+                          key={room._id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.03 }}
@@ -698,21 +658,21 @@ export default function Rooms() {
                             <div className="flex space-x-2">
                               <button 
                                 className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => toggleRoomAvailability(room.id)}
+                                onClick={() => handleToggleRoomAvailability(room._id)}
                                 title={room.available ? "Mark as Unavailable" : "Mark as Available"}
                               >
                                 {room.available ? <X size={16} /> : <Check size={16} />}
                               </button>
                               <button 
                                 className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => toggleRoomDetails(room.id)}
+                                onClick={() => toggleRoomDetails(room._id)}
                                 title="Show Details"
                               >
                                 <Info size={16} />
                               </button>
                               <button 
                                 className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => handleDeleteRoom(room.id)}
+                                onClick={() => handleDeleteRoom(room._id)}
                                 title="Delete Room"
                               >
                                 <Trash size={16} />
@@ -727,7 +687,7 @@ export default function Rooms() {
               </div>
             )}
             
-            {filteredRooms.length === 0 && (
+            {!isLoading && !error && filteredRooms.length === 0 && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
                 <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
                   <Home size={32} className="text-slate-400" />
@@ -748,6 +708,20 @@ export default function Rooms() {
           </div>
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
 
       {/* Add Room Modal */}
       <AnimatePresence>

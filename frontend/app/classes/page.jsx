@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   Book,
-  Calendar, 
-  Clock, 
-  Edit, 
-  Filter, 
-  Menu, 
-  MessageSquare, 
-  Plus, 
-  Search, 
-  Trash, 
+  Calendar,
+  Clock,
+  Edit,
+  Filter,
+  Menu,
+  MessageSquare,
+  Plus,
+  Search,
+  Trash,
   Users,
   X,
   Info,
@@ -21,121 +21,21 @@ import {
   UserCheck,
   Clipboard,
   Check,
-  Building
+  Building,
+  AlertCircle
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { getClasses, createClass, updateClass, deleteClass } from "@/services/classService";
+import "../../sass/fonts.scss";
 
-// Dummy data for classes
-const classesData = [
-  { 
-    id: 1, 
-    name: "Grade 10A", 
-    students: 32, 
-    subjects: ["Mathematics", "Physics", "Chemistry", "English", "History"],
-    classTeacher: "Mr. Johnson",
-    roomAssigned: "Smart Classroom 101",
-    schedule: {
-      monday: ["Mathematics", "Physics", "Chemistry", "English", "History"],
-      tuesday: ["English", "Mathematics", "Physics", "Chemistry", "History"],
-      wednesday: ["History", "English", "Mathematics", "Physics", "Chemistry"],
-      thursday: ["Chemistry", "History", "English", "Mathematics", "Physics"],
-      friday: ["Physics", "Chemistry", "History", "English", "Mathematics"]
-    },
-    image: "/assets/class1.jpeg",
-    lastUpdated: "2 hours ago"
-  },
-  { 
-    id: 2, 
-    name: "Grade 10B", 
-    students: 28, 
-    subjects: ["Mathematics", "Biology", "Chemistry", "English", "Geography"],
-    classTeacher: "Ms. Thompson",
-    roomAssigned: "Collaborative Space 102",
-    schedule: {
-      monday: ["Mathematics", "Biology", "Chemistry", "English", "Geography"],
-      tuesday: ["English", "Mathematics", "Biology", "Chemistry", "Geography"],
-      wednesday: ["Geography", "English", "Mathematics", "Biology", "Chemistry"],
-      thursday: ["Chemistry", "Geography", "English", "Mathematics", "Biology"],
-      friday: ["Biology", "Chemistry", "Geography", "English", "Mathematics"]
-    },
-    image: "/assets/class2.jpg",
-    lastUpdated: "1 day ago"
-  },
-  { 
-    id: 3, 
-    name: "Grade 11A", 
-    students: 30, 
-    subjects: ["Advanced Mathematics", "Physics", "Computer Science", "English Literature", "Economics"],
-    classTeacher: "Dr. Martinez",
-    roomAssigned: "Science Lab 201",
-    schedule: {
-      monday: ["Advanced Mathematics", "Physics", "Computer Science", "English Literature", "Economics"],
-      tuesday: ["English Literature", "Advanced Mathematics", "Physics", "Computer Science", "Economics"],
-      wednesday: ["Economics", "English Literature", "Advanced Mathematics", "Physics", "Computer Science"],
-      thursday: ["Computer Science", "Economics", "English Literature", "Advanced Mathematics", "Physics"],
-      friday: ["Physics", "Computer Science", "Economics", "English Literature", "Advanced Mathematics"]
-    },
-    image: "/assets/class3.jpg",
-    lastUpdated: "Yesterday"
-  },
-  { 
-    id: 4, 
-    name: "Grade 11B", 
-    students: 27, 
-    subjects: ["Advanced Mathematics", "Biology", "Chemistry", "English Literature", "Psychology"],
-    classTeacher: "Mrs. Wilson",
-    roomAssigned: "Lecture Hall A",
-    schedule: {
-      monday: ["Advanced Mathematics", "Biology", "Chemistry", "English Literature", "Psychology"],
-      tuesday: ["English Literature", "Advanced Mathematics", "Biology", "Chemistry", "Psychology"],
-      wednesday: ["Psychology", "English Literature", "Advanced Mathematics", "Biology", "Chemistry"],
-      thursday: ["Chemistry", "Psychology", "English Literature", "Advanced Mathematics", "Biology"],
-      friday: ["Biology", "Chemistry", "Psychology", "English Literature", "Advanced Mathematics"]
-    },
-    image: "/assets/class4.jpg",
-    lastUpdated: "3 days ago"
-  },
-  { 
-    id: 5, 
-    name: "Grade 12A", 
-    students: 25, 
-    subjects: ["Calculus", "Physics", "Computer Science", "Literature", "History"],
-    classTeacher: "Mr. Peterson",
-    roomAssigned: "Conference Room 305",
-    schedule: {
-      monday: ["Calculus", "Physics", "Computer Science", "Literature", "History"],
-      tuesday: ["Literature", "Calculus", "Physics", "Computer Science", "History"],
-      wednesday: ["History", "Literature", "Calculus", "Physics", "Computer Science"],
-      thursday: ["Computer Science", "History", "Literature", "Calculus", "Physics"],
-      friday: ["Physics", "Computer Science", "History", "Literature", "Calculus"]
-    },
-    image: "/assets/class5.jpg",
-    lastUpdated: "Just now"
-  },
-  { 
-    id: 6, 
-    name: "Grade 12B", 
-    students: 23, 
-    subjects: ["Calculus", "Biology", "Chemistry", "Literature", "Economics"],
-    classTeacher: "Ms. Rodriguez",
-    roomAssigned: "Computer Lab",
-    schedule: {
-      monday: ["Calculus", "Biology", "Chemistry", "Literature", "Economics"],
-      tuesday: ["Literature", "Calculus", "Biology", "Chemistry", "Economics"],
-      wednesday: ["Economics", "Literature", "Calculus", "Biology", "Chemistry"],
-      thursday: ["Chemistry", "Economics", "Literature", "Calculus", "Biology"],
-      friday: ["Biology", "Chemistry", "Economics", "Literature", "Calculus"]
-    },
-    image: "/assets/class6.jpg",
-    lastUpdated: "4 hours ago"
-  }
-];
 
 // Common available subjects
 const availableSubjects = [
   "Mathematics", "Advanced Mathematics", "Calculus",
-  "Physics", "Chemistry", "Biology", 
+  "Physics", "Chemistry", "Biology",
   "Computer Science", "English", "English Literature", "Literature",
   "History", "Geography", "Economics", "Psychology"
 ];
@@ -166,14 +66,16 @@ export default function Classes() {
   const [activeTab, setActiveTab] = useState("classes");
   const [isMobile, setIsMobile] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showClassDetails, setShowClassDetails] = useState(null);
-  const [classes, setClasses] = useState(classesData);
-  const [filteredClasses, setFilteredClasses] = useState(classesData);
+  const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
   const [activeView, setActiveView] = useState("grid"); // grid or list
   const [selectedDay, setSelectedDay] = useState("monday");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editClassId, setEditClassId] = useState(null);
-  
+
   const [newClass, setNewClass] = useState({
     name: "",
     students: "",
@@ -190,6 +92,25 @@ export default function Classes() {
     image: "/assets/class1.jpeg"
   });
 
+  // Fetch classes from API on component mount
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        setIsLoading(true);
+        const response = await getClasses();
+        setClasses(response.data);
+        setFilteredClasses(response.data);
+        setIsLoading(false);
+      } catch (err) {
+        setError(err.error || "Failed to fetch classes");
+        setIsLoading(false);
+        toast.error(err.error || "Failed to fetch classes");
+      }
+    };
+
+    fetchClasses();
+  }, []);
+
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
@@ -197,7 +118,7 @@ export default function Classes() {
       if (mobile) setIsSidebarOpen(false);
       else setIsSidebarOpen(true);
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
@@ -206,15 +127,15 @@ export default function Classes() {
   // Filter classes based on search term
   useEffect(() => {
     let filtered = classes;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(cls => 
+      filtered = filtered.filter(cls =>
         cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cls.classTeacher.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cls.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     setFilteredClasses(filtered);
   }, [searchTerm, classes]);
 
@@ -245,9 +166,20 @@ export default function Classes() {
 
   const toggleEditModal = (classId = null) => {
     if (classId) {
-      const classToEdit = classes.find(c => c.id === classId);
+      const classToEdit = classes.find(c => c._id === classId);
       if (classToEdit) {
-        setNewClass({...classToEdit});
+        // Make a deep copy of the class object to prevent unexpected mutations
+        setNewClass({
+          ...classToEdit,
+          // Ensure the schedule has the expected structure
+          schedule: {
+            monday: classToEdit.schedule?.monday || Array(5).fill(""),
+            tuesday: classToEdit.schedule?.tuesday || Array(5).fill(""),
+            wednesday: classToEdit.schedule?.wednesday || Array(5).fill(""),
+            thursday: classToEdit.schedule?.thursday || Array(5).fill(""),
+            friday: classToEdit.schedule?.friday || Array(5).fill("")
+          }
+        });
         setEditClassId(classId);
         setIsEditModalOpen(true);
       }
@@ -296,44 +228,79 @@ export default function Classes() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewClass(prev => ({ 
-      ...prev, 
-      [name]: value 
+    setNewClass(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
 
-  const handleAddClass = (e) => {
+  const handleAddClass = async (e) => {
     e.preventDefault();
-    
-    // Create new class object
-    const newClassObj = {
-      id: classes.length + 1,
-      ...newClass,
-      students: parseInt(newClass.students),
-      lastUpdated: "Just now"
-    };
-    
-    // Add new class to classes list
-    setClasses(prev => [...prev, newClassObj]);
-    
-    // Close modal and reset form
-    toggleModal();
+
+    try {
+      // Create class data object from form
+      const classData = {
+        ...newClass,
+        students: parseInt(newClass.students),
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Submit to API
+      const response = await createClass(classData);
+
+      // Add new class to state
+      setClasses(prev => [...prev, response.data]);
+
+      // Show success message
+      toast.success("Class created successfully!");
+
+      // Close modal and reset form
+      toggleModal();
+    } catch (err) {
+      toast.error(err.error || "Failed to create class");
+    }
   };
 
-  const handleUpdateClass = (e) => {
+  const handleUpdateClass = async (e) => {
     e.preventDefault();
-    
-    // Update existing class
-    setClasses(classes.map(cls => 
-      cls.id === editClassId ? {...newClass, lastUpdated: "Just now"} : cls
-    ));
-    
-    // Close modal
-    toggleEditModal();
+
+    try {
+      // Update data object
+      const classData = {
+        ...newClass,
+        students: parseInt(newClass.students),
+        lastUpdated: new Date().toISOString()
+      };
+
+      // Submit to API
+      const response = await updateClass(editClassId, classData);
+
+      // Update existing class in state
+      setClasses(classes.map(cls => 
+        cls._id === editClassId ? response.data : cls
+      ));
+
+      // Show success message
+      toast.success("Class updated successfully!");
+
+      // Close modal
+      toggleEditModal();
+    } catch (err) {
+      toast.error(err.error || "Failed to update class");
+    }
   };
 
-  const handleDeleteClass = (id) => {
-    setClasses(classes.filter(cls => cls.id !== id));
+  const handleDeleteClass = async (id) => {
+    try {
+      // Confirm before delete
+      if (window.confirm("Are you sure you want to delete this class?")) {
+        await deleteClass(id);
+        setClasses(classes.filter(cls => cls._id !== id));
+        toast.success("Class deleted successfully!");
+      }
+    } catch (err) {
+      toast.error(err.error || "Failed to delete class");
+    }
   };
 
   // Function to generate a random image for the class
@@ -347,7 +314,7 @@ export default function Classes() {
 
   // Helper function to get class schedule for the selected day
   const getScheduleForDay = (classObj, day) => {
-    return classObj.schedule[day] || [];
+    return classObj.schedule?.[day] || Array(5).fill("");
   };
 
   // Days of the week for tabs
@@ -356,9 +323,9 @@ export default function Classes() {
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 overflow-hidden">
       {/* Sidebar */}
-      <Sidebar 
-        isSidebarOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar} 
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
         isMobile={isMobile}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -374,20 +341,20 @@ export default function Classes() {
               <button onClick={toggleSidebar} className="lg:hidden mr-4 text-slate-400 hover:text-white">
                 <Menu size={24} />
               </button>
-              
+
               {/* Search Bar */}
               <div className="relative">
                 <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search classes..." 
+                <input
+                  type="text"
+                  placeholder="Search classes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-64 bg-slate-700/50 border border-slate-600 text-sm rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-400"
                 />
               </div>
             </div>
-            
+
             {/* Right Side Nav Items */}
             <div className="flex items-center space-x-4">
               <button className="relative p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-700/50">
@@ -420,7 +387,7 @@ export default function Classes() {
               <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
                 {/* View Toggle */}
                 <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                  <button 
+                  <button
                     onClick={() => setActiveView("grid")}
                     className={`p-2 text-sm ${activeView === "grid" ? "bg-slate-700 text-white" : "text-slate-400"}`}
                   >
@@ -431,7 +398,7 @@ export default function Classes() {
                       <rect x="14" y="14" width="7" height="7"/>
                     </svg>
                   </button>
-                  <button 
+                  <button
                     onClick={() => setActiveView("list")}
                     className={`p-2 text-sm ${activeView === "list" ? "bg-slate-700 text-white" : "text-slate-400"}`}
                   >
@@ -449,8 +416,8 @@ export default function Classes() {
                 {/* Day Filter for Schedule View */}
                 <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
                   {daysOfWeek.map((day) => (
-                    <button 
-                      key={day} 
+                    <button
+                      key={day}
                       onClick={() => setSelectedDay(day)}
                       className={`px-3 py-2 text-xs uppercase ${selectedDay === day ? "bg-slate-700 text-white" : "text-slate-400"}`}
                     >
@@ -472,12 +439,27 @@ export default function Classes() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-rose-900/30 border border-rose-800 text-rose-200 px-4 py-3 rounded-lg flex items-center">
+                <AlertCircle size={20} className="mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* Classes Display - Grid View */}
-            {activeView === "grid" && (
+            {activeView === "grid" && !isLoading && !error && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {filteredClasses.map((classObj, index) => (
                   <motion.div
-                    key={classObj.id}
+                    key={classObj._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -485,63 +467,63 @@ export default function Classes() {
                   >
                     {/* Class Image */}
                     <div className="relative h-40 overflow-hidden">
-                      <Image 
+                      <Image
                         src={classObj.image}
                         alt={classObj.name}
                         fill
                         style={{objectFit: "cover"}}
                         className="transition-transform duration-300 hover:scale-105"
                       />
-                      
+
                       {/* Class Teacher Badge */}
                       <div className="absolute top-3 left-3 bg-indigo-900/80 text-indigo-300 border border-indigo-600/50 px-2 py-1 rounded text-xs font-medium flex items-center">
                         <UserCheck size={12} className="mr-1" />
                         <span>{classObj.classTeacher}</span>
                       </div>
-                      
+
                       {/* Students Count Badge */}
                       <div className="absolute bottom-3 left-3 bg-violet-900/80 text-violet-300 border border-violet-600/50 px-2 py-1 rounded text-xs font-medium flex items-center">
                         <Users size={12} className="mr-1" />
                         <span>{classObj.students} Students</span>
                       </div>
                     </div>
-                    
+
                     {/* Class Info */}
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium text-lg mb-1 line-clamp-1">{classObj.name}</h3>
                         <div className="flex space-x-1">
-                          <button 
+                          <button
                             className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => toggleEditModal(classObj.id)}
+                            onClick={() => toggleEditModal(classObj._id)}
                             title="Edit Class"
                           >
                             <Edit size={14} />
                           </button>
-                          <button 
+                          <button
                             className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => toggleClassDetails(classObj.id)}
+                            onClick={() => toggleClassDetails(classObj._id)}
                             title="View Schedule"
                           >
                             <Info size={14} />
                           </button>
-                          <button 
+                          <button
                             className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                            onClick={() => handleDeleteClass(classObj.id)}
+                            onClick={() => handleDeleteClass(classObj._id)}
                             title="Delete Class"
                           >
                             <Trash size={14} />
                           </button>
                         </div>
                       </div>
-                      
+
                       <div className="text-slate-400 text-sm mb-3">
                         <div className="flex items-center">
                           <Building size={14} className="mr-1" />
                           <span>{classObj.roomAssigned}</span>
                         </div>
                       </div>
-                      
+
                       {/* Subjects */}
                       <div className="mb-3">
                         <div className="text-xs uppercase font-semibold text-slate-500 mb-2">Subjects</div>
@@ -559,15 +541,15 @@ export default function Classes() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Last Updated */}
                       <div className="text-xs text-slate-500">
-                        <span>Last updated: {classObj.lastUpdated}</span>
+                        <span>Last updated: {classObj.lastUpdated ? new Date(classObj.lastUpdated).toLocaleString() : "Just now"}</span>
                       </div>
-                      
+
                       {/* Conditional Schedule Display */}
                       <AnimatePresence>
-                        {showClassDetails === classObj.id && (
+                        {showClassDetails === classObj._id && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
@@ -584,8 +566,8 @@ export default function Classes() {
                                     key={day}
                                     onClick={() => setSelectedDay(day)}
                                     className={`w-6 h-6 flex items-center justify-center text-xs rounded-full ${
-                                      selectedDay === day 
-                                        ? 'bg-emerald-500/20 text-emerald-400' 
+                                      selectedDay === day
+                                        ? 'bg-emerald-500/20 text-emerald-400'
                                         : 'text-slate-500 hover:bg-slate-700'
                                     }`}
                                   >
@@ -594,7 +576,7 @@ export default function Classes() {
                                 ))}
                               </div>
                             </div>
-                            
+
                             <div className="bg-slate-700/30 rounded-lg p-2">
                               {getScheduleForDay(classObj, selectedDay).map((subject, i) => (
                                 <div key={i} className="flex items-center justify-between py-1 border-b border-slate-700/50 last:border-0">
@@ -602,7 +584,7 @@ export default function Classes() {
                                     <span className="w-6 h-6 flex items-center justify-center bg-slate-700 rounded-full text-xs mr-2">
                                       {i+1}
                                     </span>
-                                    <span className="text-sm">{subject}</span>
+                                    <span className="text-sm">{subject || "Free Period"}</span>
                                   </div>
                                   <div className="text-xs text-slate-400">
                                     {8 + i}:00 - {9 + i}:00
@@ -618,9 +600,9 @@ export default function Classes() {
                 ))}
               </div>
             )}
-            
+
             {/* Classes Display - List View */}
-            {activeView === "list" && (
+            {activeView === "list" && !isLoading && !error && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden mb-6">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -636,8 +618,8 @@ export default function Classes() {
                     </thead>
                     <tbody>
                       {filteredClasses.map((classObj, index) => (
-                        <motion.tr 
-                          key={classObj.id}
+                        <motion.tr
+                          key={classObj._id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: index * 0.03 }}
@@ -646,7 +628,7 @@ export default function Classes() {
                           <td className="p-4">
                             <div className="flex items-center">
                               <div className="w-10 h-10 rounded-md overflow-hidden mr-3 relative flex-shrink-0">
-                                <Image 
+                                <Image
                                   src={classObj.image}
                                   alt={classObj.name}
                                   fill
@@ -655,7 +637,9 @@ export default function Classes() {
                               </div>
                               <div>
                                 <div className="font-medium">{classObj.name}</div>
-                                <div className="text-xs text-slate-400">Updated: {classObj.lastUpdated}</div>
+                                <div className="text-xs text-slate-400">
+                                  Updated: {classObj.lastUpdated ? new Date(classObj.lastUpdated).toLocaleString() : "Just now"}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -693,23 +677,23 @@ export default function Classes() {
                           </td>
                           <td className="p-4">
                             <div className="flex space-x-2">
-                              <button 
+                              <button
                                 className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => toggleEditModal(classObj.id)}
+                                onClick={() => toggleEditModal(classObj._id)}
                                 title="Edit Class"
                               >
                                 <Edit size={16} />
                               </button>
-                              <button 
+                              <button
                                 className="p-1 text-slate-400 hover:text-emerald-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => toggleClassDetails(classObj.id)}
+                                onClick={() => toggleClassDetails(classObj._id)}
                                 title="View Schedule"
                               >
                                 <Info size={16} />
                               </button>
-                              <button 
+                              <button
                                 className="p-1 text-slate-400 hover:text-rose-400 rounded-full hover:bg-slate-700/50 transition-colors"
-                                onClick={() => handleDeleteClass(classObj.id)}
+                                onClick={() => handleDeleteClass(classObj._id)}
                                 title="Delete Class"
                               >
                                 <Trash size={16} />
@@ -723,8 +707,8 @@ export default function Classes() {
                 </div>
               </div>
             )}
-            
-            {filteredClasses.length === 0 && (
+
+            {!isLoading && !error && filteredClasses.length === 0 && (
               <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 text-center">
                 <div className="w-16 h-16 mx-auto bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
                   <Book size={32} className="text-slate-400" />
@@ -746,6 +730,20 @@ export default function Classes() {
         </main>
       </div>
 
+      {/* Toast Notifications */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+
       {/* Add Class Modal */}
       <AnimatePresence>
         {isModalOpen && (
@@ -758,7 +756,7 @@ export default function Classes() {
               className="fixed inset-0 bg-black/60 z-40"
               onClick={toggleModal}
             />
-            
+
             {/* Modal Content */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -783,7 +781,7 @@ export default function Classes() {
                   <div className="space-y-4">
                     {/* Class Image Preview */}
                     <div className="relative rounded-lg overflow-hidden h-32 bg-slate-700">
-                      <Image 
+                      <Image
                         src={newClass.image}
                         alt="Class Preview"
                         fill
@@ -907,7 +905,7 @@ export default function Classes() {
                     {/* Schedule Creation */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Class Schedule</label>
-                      
+
                       {/* Day Tabs */}
                       <div className="flex border-b border-slate-700 mb-3">
                         {daysOfWeek.map((day) => (
@@ -916,8 +914,8 @@ export default function Classes() {
                             type="button"
                             onClick={() => setSelectedDay(day)}
                             className={`px-4 py-2 text-sm capitalize ${
-                              selectedDay === day 
-                                ? 'text-emerald-400 border-b-2 border-emerald-500 -mb-px' 
+                              selectedDay === day
+                                ? 'text-emerald-400 border-b-2 border-emerald-500 -mb-px'
                                 : 'text-slate-400 hover:text-slate-300'
                             }`}
                           >
@@ -981,7 +979,7 @@ export default function Classes() {
               className="fixed inset-0 bg-black/60 z-40"
               onClick={() => toggleEditModal()}
             />
-            
+
             {/* Modal Content */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -1006,7 +1004,7 @@ export default function Classes() {
                   <div className="space-y-4">
                     {/* Class Image Preview */}
                     <div className="relative rounded-lg overflow-hidden h-32 bg-slate-700">
-                      <Image 
+                      <Image
                         src={newClass.image}
                         alt="Class Preview"
                         fill
@@ -1130,7 +1128,7 @@ export default function Classes() {
                     {/* Schedule Creation */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Class Schedule</label>
-                      
+
                       {/* Day Tabs */}
                       <div className="flex border-b border-slate-700 mb-3">
                         {daysOfWeek.map((day) => (
@@ -1139,8 +1137,8 @@ export default function Classes() {
                             type="button"
                             onClick={() => setSelectedDay(day)}
                             className={`px-4 py-2 text-sm capitalize ${
-                              selectedDay === day 
-                                ? 'text-emerald-400 border-b-2 border-emerald-500 -mb-px' 
+                              selectedDay === day
+                                ? 'text-emerald-400 border-b-2 border-emerald-500 -mb-px'
                                 : 'text-slate-400 hover:text-slate-300'
                             }`}
                           >

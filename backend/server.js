@@ -14,8 +14,13 @@ dotenv.config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data');
+const courses = require('./routes/courses');
+const teachers = require('./routes/teachers');
 const timetableRoutes = require('./routes/timetable');
+const roomRoutes = require('./routes/rooms');
+const classRoutes = require('./routes/class');
+
+
 
 // Initialize express app
 const app = express();
@@ -45,8 +50,14 @@ app.use(compression()); // Compress all responses
 
 // API routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/data', dataRoutes);
-// app.use('/api/timetable', timetableRoutes);
+app.use('/api/courses', courses);
+app.use('/api/teachers', teachers);
+app.use('/api/rooms', roomRoutes);
+app.use('/api/classes', classRoutes);
+app.use('/api/timetable', timetableRoutes);
+
+
+
 
 // Base route
 app.get('/', (req, res) => {

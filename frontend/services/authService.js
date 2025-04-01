@@ -1,6 +1,4 @@
-// This file should be placed in your Next.js app structure, perhaps in a services folder
 
-// API URL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Register user
