@@ -13,7 +13,7 @@ import * as XLSX from 'xlsx';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, BorderStyle, HeadingLevel } from 'docx';
 
 // Configure axios base URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smart-timetable-generator-1.onrender.com/api';
 axios.defaults.baseURL = API_URL;
 
 // Day colors for visual distinction
