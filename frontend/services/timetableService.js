@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smart-timetable-generator-1.onrender.com/api';
 
 // Create axios instance
 const api = axios.create({

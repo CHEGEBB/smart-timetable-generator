@@ -29,6 +29,8 @@ import Image from "next/image";
 import { getRooms, createRoom, deleteRoom, toggleRoomAvailability } from "@/services/roomService";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import "@/sass/fonts.scss";
+
 
 // Custom Projector icon since it's not in lucide-react
 const ProjectorIcon = (props) => (
@@ -87,7 +89,6 @@ export default function Rooms() {
     isCertified: false,
     image: "/assets/class1.jpeg"
   });
-  import "../../sass/fonts.scss";
 
   
   // Fetch rooms from API
