@@ -399,10 +399,11 @@ export default function Generate() {
         scale: 2,
         logging: false,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        backgroundColor: '#ffffff'
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg');
       
       // Portrait or landscape based on width/height ratio
       const orientation = canvas.width > canvas.height ? 'l' : 'p';
@@ -427,7 +428,7 @@ export default function Generate() {
       const imgX = 15;
       const imgY = 30;
       
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
       pdf.save(`${settings.name}.pdf`);
       
       toast.success("PDF exported successfully!");
@@ -448,7 +449,8 @@ export default function Generate() {
         scale: 2,
         logging: false,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        backgroundColor: '#ffffff'
       });
       
       canvas.toBlob((blob) => {
@@ -456,7 +458,7 @@ export default function Generate() {
           saveAs(blob, `${settings.name}.png`);
           toast.success("PNG exported successfully!");
         }
-      });
+      }, 'image/png');
     } catch (err) {
       console.error("PNG export error:", err);
       toast.error("Failed to export PNG: " + err.message);
@@ -527,7 +529,7 @@ export default function Generate() {
           
           // Add break row if needed
           if (period === settings.breakAfter) {
-            rows.push(['BREAK', '20 min', ...workingDays.map(() => '')]);
+            rows.push(['BREAK', `${settings.breakDuration} min`, ...workingDays.map(() => '')]);
           }
         });
         
@@ -907,6 +909,48 @@ export default function Generate() {
     return `hsla(${hue}, 70%, 30%, 0.3)`;
   };
 
+  // Get CSS RGB color from HSL for PDF/PNG export compatibility
+  const getSubjectRgbColor = (subject) => {
+    // Simple hash function to get consistent colors for subjects
+    let hash = 0;
+    for (let i = 0; i < subject.length; i++) {
+      hash = subject.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Get a hue between 0 and 360 based on the hash
+    const hue = hash % 360;
+    
+    // Convert HSL to RGB
+    const h = hue / 360;
+    const s = 0.7;
+    const l = 0.3;
+    
+    let r, g, b;
+    
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    // Convert to RGB values between 0 and 255 with alpha
+    return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, 0.3)`;
+  };
+
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100 overflow-hidden">
       {/* Sidebar */}
@@ -952,10 +996,10 @@ export default function Generate() {
           
           {/* Tabs for timetable generated view */}
           {generationSuccess && (
-            <div className="flex border-t border-slate-700">
+            <div className="flex border-t border-slate-700 overflow-x-auto">
               <button
                 onClick={() => setCurrentTab("timetable")}
-                className={`px-4 py-3 text-sm font-medium ${
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${
                   currentTab === "timetable" 
                     ? "text-emerald-400 border-b-2 border-emerald-400" 
                     : "text-slate-400 hover:text-white"
@@ -965,7 +1009,7 @@ export default function Generate() {
               </button>
               <button
                 onClick={() => setCurrentTab("settings")}
-                className={`px-4 py-3 text-sm font-medium ${
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${
                   currentTab === "settings" 
                     ? "text-emerald-400 border-b-2 border-emerald-400" 
                     : "text-slate-400 hover:text-white"
@@ -975,7 +1019,7 @@ export default function Generate() {
               </button>
               <button
                 onClick={() => setCurrentTab("export")}
-                className={`px-4 py-3 text-sm font-medium ${
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${
                   currentTab === "export" 
                     ? "text-emerald-400 border-b-2 border-emerald-400" 
                     : "text-slate-400 hover:text-white"
@@ -1030,13 +1074,13 @@ export default function Generate() {
 
             {/* Generation Result Message - Only show when timetable is generated */}
             {generationSuccess && !isLoading && (
-              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 px-6 py-4 rounded-lg flex items-center mb-6 print:hidden">
-                <Check size={24} className="mr-3 text-emerald-400 flex-shrink-0" />
-                <div>
+              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 px-4 sm:px-6 py-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center mb-6 print:hidden">
+                <Check size={24} className="mr-3 text-emerald-400 flex-shrink-0 mb-2 sm:mb-0" />
+                <div className="mb-3 sm:mb-0">
                   <h3 className="font-medium text-lg">Timetable Generated Successfully!</h3>
                   <p className="text-emerald-300">Your timetable has been created without any conflicts.</p>
                 </div>
-                <div className="ml-auto flex flex-wrap gap-2">
+                <div className="ml-0 sm:ml-auto flex flex-wrap gap-2">
                   <button 
                     onClick={exportAsPDF}
                     className="bg-emerald-700/50 hover:bg-emerald-700 text-white py-2 px-3 rounded flex items-center gap-1 transition-colors text-sm"
@@ -1262,26 +1306,48 @@ export default function Generate() {
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Dropdown for Classes */}
+                      <select
+                        multiple
+                        size={5}
+                        className="w-full bg-slate-700/50 border border-slate-600 text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-2"
+                        value={selectedData.classes}
+                        onChange={(e) => {
+                          const selected = Array.from(e.target.selectedOptions, option => option.value);
+                          setSelectedData(prev => ({...prev, classes: selected}));
+                        }}
+                      >
+                        {classes.map(cls => (
+                          <option key={cls._id} value={cls._id}>
+                            {cls.name} {cls.students ? `(${cls.students} students)` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Visual Selection Grid */}
                       <div className="max-h-40 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                         {classes.length === 0 ? (
                           <div className="bg-slate-700/30 border border-slate-600 text-slate-400 p-3 rounded-lg text-sm">
                             No classes available
                           </div>
                         ) : (
-                          classes.map(cls => (
-                            <div 
-                              key={cls._id}
-                              onClick={() => handleDataSelection('classes', cls._id)}
-                              className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
-                                selectedData.classes.includes(cls._id)
-                                  ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
-                                  : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
-                              }`}
-                            >
-                              <div className="font-medium">{cls.name}</div>
-                              {renderClassDetails(cls)}
-                            </div>
-                          ))
+                          <div className="grid grid-cols-2 gap-2">
+                            {classes.map(cls => (
+                              <div 
+                                key={cls._id}
+                                onClick={() => handleDataSelection('classes', cls._id)}
+                                className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
+                                  selectedData.classes.includes(cls._id)
+                                    ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
+                                    : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
+                                }`}
+                              >
+                                <div className="font-medium">{cls.name}</div>
+                                {renderClassDetails(cls)}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1307,26 +1373,48 @@ export default function Generate() {
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Dropdown for Teachers */}
+                      <select
+                        multiple
+                        size={5}
+                        className="w-full bg-slate-700/50 border border-slate-600 text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-2"
+                        value={selectedData.teachers}
+                        onChange={(e) => {
+                          const selected = Array.from(e.target.selectedOptions, option => option.value);
+                          setSelectedData(prev => ({...prev, teachers: selected}));
+                        }}
+                      >
+                        {teachers.map(teacher => (
+                          <option key={teacher._id} value={teacher._id}>
+                            {teacher.name} {teacher.subject ? `(${teacher.subject})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Visual Selection Grid */}
                       <div className="max-h-40 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                         {teachers.length === 0 ? (
                           <div className="bg-slate-700/30 border border-slate-600 text-slate-400 p-3 rounded-lg text-sm">
                             No teachers available
                           </div>
                         ) : (
-                          teachers.map(teacher => (
-                            <div 
-                              key={teacher._id}
-                              onClick={() => handleDataSelection('teachers', teacher._id)}
-                              className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
-                                selectedData.teachers.includes(teacher._id)
-                                  ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
-                                  : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
-                              }`}
-                            >
-                              <div className="font-medium">{teacher.name}</div>
-                              {renderTeacherDetails(teacher)}
-                            </div>
-                          ))
+                          <div className="grid grid-cols-2 gap-2">
+                            {teachers.map(teacher => (
+                              <div 
+                                key={teacher._id}
+                                onClick={() => handleDataSelection('teachers', teacher._id)}
+                                className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
+                                  selectedData.teachers.includes(teacher._id)
+                                    ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
+                                    : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
+                                }`}
+                              >
+                                <div className="font-medium">{teacher.name}</div>
+                                {renderTeacherDetails(teacher)}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1352,26 +1440,48 @@ export default function Generate() {
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Dropdown for Rooms */}
+                      <select
+                        multiple
+                        size={5}
+                        className="w-full bg-slate-700/50 border border-slate-600 text-sm rounded-lg py-2 px-3 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-2"
+                        value={selectedData.rooms}
+                        onChange={(e) => {
+                          const selected = Array.from(e.target.selectedOptions, option => option.value);
+                          setSelectedData(prev => ({...prev, rooms: selected}));
+                        }}
+                      >
+                        {rooms.map(room => (
+                          <option key={room._id} value={room._id}>
+                            {room.name} {room.capacity ? `(Capacity: ${room.capacity})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Visual Selection Grid */}
                       <div className="max-h-40 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
                         {rooms.length === 0 ? (
                           <div className="bg-slate-700/30 border border-slate-600 text-slate-400 p-3 rounded-lg text-sm">
                             No rooms available
                           </div>
                         ) : (
-                          rooms.map(room => (
-                            <div 
-                              key={room._id}
-                              onClick={() => handleDataSelection('rooms', room._id)}
-                              className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
-                                selectedData.rooms.includes(room._id)
-                                  ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
-                                  : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
-                              }`}
-                            >
-                              <div className="font-medium">{room.name}</div>
-                              {renderRoomDetails(room)}
-                            </div>
-                          ))
+                          <div className="grid grid-cols-2 gap-2">
+                            {rooms.map(room => (
+                              <div 
+                                key={room._id}
+                                onClick={() => handleDataSelection('rooms', room._id)}
+                                className={`px-3 py-2 rounded-lg text-sm cursor-pointer border transition-colors ${
+                                  selectedData.rooms.includes(room._id)
+                                    ? "bg-emerald-900/30 border-emerald-700 text-emerald-400"
+                                    : "bg-slate-700/30 border-slate-600 text-slate-400 hover:bg-slate-700"
+                                }`}
+                              >
+                                <div className="font-medium">{room.name}</div>
+                                {renderRoomDetails(room)}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1458,6 +1568,7 @@ export default function Generate() {
                       {/* Save Button - Only visible after successful generation */}
                       {generationSuccess && (
                         <button
+                          onClick={() => saveTimetable(timetable)}
                           className="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-colors"
                         >
                           <Save size={20} className="mr-2" />
@@ -1478,7 +1589,7 @@ export default function Generate() {
                   <h2 className="text-xl font-semibold">Export Timetable</h2>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* PDF Export */}
                   <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600 hover:border-emerald-700 transition-colors cursor-pointer" onClick={exportAsPDF}>
                     <div className="flex items-center mb-2">
@@ -1542,12 +1653,12 @@ export default function Generate() {
 
             {/* Timetable Display */}
             {timetable && (currentTab === "timetable" || currentTab === "export") && (
-              <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-6 mb-6 print:shadow-none print:border-none print:p-0 print:bg-white print:text-black">
-                <div className="flex items-center justify-between mb-6 print:hidden">
-                  <h2 className="text-xl font-semibold">{settings.name}</h2>
+              <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-4 sm:p-6 mb-6 print:shadow-none print:border-none print:p-0 print:bg-white print:text-black">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 print:hidden">
+                  <h2 className="text-xl font-semibold mb-3 sm:mb-0">{settings.name}</h2>
                   
                   {/* View Type Selector */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <label className="text-sm font-medium text-slate-300">View by:</label>
                     <select
                       value={viewMode}
@@ -1651,9 +1762,9 @@ export default function Generate() {
                                       <td key={day} className="px-4 py-4 text-sm text-slate-300 print:text-gray-900 align-top">
                                         {slot ? (
                                           <div 
-                                            className={`${colors.bg} p-3 rounded-lg border ${colors.border} print:bg-white print:border print:border-gray-300 print:shadow-sm`}
+                                            className={`p-3 rounded-lg border print:bg-white print:border print:border-gray-300 print:shadow-sm`}
                                             style={{
-                                              backgroundColor: `${getSubjectColor(slot.subject)}`,
+                                              backgroundColor: getSubjectRgbColor(slot.subject),
                                               borderColor: 'rgba(255, 255, 255, 0.1)'
                                             }}
                                           >
