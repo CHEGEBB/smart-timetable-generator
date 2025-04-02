@@ -1,5 +1,5 @@
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smart-timetable-generator-1.onrender.com/api';
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smart-timetable-generator-1.onrender.com/api';
 
 // Register user
 export const registerUser = async (userData) => {
